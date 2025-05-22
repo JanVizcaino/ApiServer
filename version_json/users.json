@@ -1,0 +1,26 @@
+[
+    {
+        "email": "test@test.es",
+        "password": "123456"
+    },
+    {
+        "email": "test2@test.es",
+        "password": "123456"
+    },
+    {
+        "email": "jan@jan.jan",
+        "password": "jan"
+    },
+    {
+        "email": "pablo@pablo.pablo",
+        "password": "pablo"
+    },
+    {
+        "email": "xmateo@xmateo.es",
+        "password": "xaviMATEO4231+\"cristoredentor\":"
+    },
+    {
+        "email": "jan@gmail.com",
+        "password": "1234"
+    }
+]

@@ -16,14 +16,9 @@ body {
     text-align: center;
 }
 
-/*main {
-    flex: 1;
-    position: fixed;
-    top: 50%;
-    height: 100vh;
-    transform: translateY(-50%);
-}*/
-
+.bg-blue{
+    background-color: #141418;
+}
 
 .content-section {
     max-height: fit-content;

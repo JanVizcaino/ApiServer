@@ -1,15 +1,8 @@
-document.addEventListener("DOMContentLoaded",function(){
-    /*toggleModal();
-
-    const currentPath = window.location.pathname;
-
-    if (!currentPath.endsWith("html/index.php")) {
-        const fakeElement = document.createElement("div");
-        fakeElement.setAttribute("data-url", "./html/index.php");
-        toggleBody(fakeElement);    }*/
-
-        appendVideo();
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("toggle-modal").addEventListener("click", toggleModal);
+    appendVideo();
 });
+
 
 let searchArray = [];
 let songsArray = JSON.parse(localStorage.getItem("cancion")) || [];
@@ -19,6 +12,7 @@ function initEventListeners() {
     const checkBtn = document.getElementById("check-song");
     if (checkBtn) {
         checkBtn.addEventListener("click", function (event) {
+            console.log("Hola");
             event.preventDefault();
             if (!validateRegisterForm('check')) return;
             checkSongJSONP();
@@ -28,6 +22,7 @@ function initEventListeners() {
     const addBtn = document.getElementById("add-song");
     if (addBtn) {
         addBtn.addEventListener("click", function (event) {
+            console.log("Hola");
             event.preventDefault();
             if (!validateRegisterForm('add')) return;
             addSong();
@@ -37,6 +32,7 @@ function initEventListeners() {
     const filterBtn = document.getElementById("filter-song");
     if (filterBtn) {
         filterBtn.addEventListener("click", function (event) {
+            console.log("Hola");
             event.preventDefault();
             if (!validateFilterForm()) return;
             fillFilterDataResult();
@@ -46,41 +42,15 @@ function initEventListeners() {
     const resetFilter = document.getElementById("reset-filter");
     if (resetFilter) {
         resetFilter.addEventListener("click", function (event) {
+            console.log("Hola");
             event.preventDefault();
             resetFilterData();
         });
     }
 
-    
+
 }
 
-// Cambia el contenido del body y reinicia los listeners
-function toggleBody(element) {
-    const modalContainer = document.getElementById("modal-container");
-    const url = element.getAttribute("data-url"); //Añado el elemento de data-url para hacer el fetch a esa url
-
-    fetch(url)
-        .then(response => response.text()) //Convierto la respuesta a texto
-        .then(html => {
-            document.getElementById("main").innerHTML = html; //Con el contenido, lo añado.
-            appendVideo(); //También le añado el video de fondo
-
-            if (url === `./html/songslist.php`) { //Si me encuentro en songslist.html
-                const datosGuardados = localStorage.getItem("cancion"); 
-                if (datosGuardados) {
-                    const array = JSON.parse(datosGuardados);
-                    songsArray.length = 0;
-                    array.forEach(song => songsArray.push(song));
-                    showSongs(); //Muestro las canciones
-                }
-            }
-
-            appendModal(url); //También le añado el modal de filtrado / registro
-            initEventListeners(); //Y le añado los eventListeners correspondientes para cada botón.
-
-        })
-        .catch(error => console.error("Error:", error));
-}
 
 // Obtiene los datos del formulario
 function getFormData(type) {
@@ -114,7 +84,7 @@ function validateRegisterForm(mode) {
         else if (!puntuacion) error = "Debes seleccionar una puntuación";
         else if (!portada) error = "No hay imagen remota de portada disponible";
 
-        if (array){
+        if (array) {
             if (array.some(cancion => cancion.titulo === titulo)) {
                 error = "Ya has añadido esta canción";
             }
@@ -274,7 +244,7 @@ function resetForm(type) {
 
 function resetResultData() {
     const resultList = document.getElementById("results-list");
-    const emptyMsg = document.getElementById("empty-msg");
+    const emptyMsg = document.getElementById("songslist-empty-msg");
     resultList.style.display = "none";
     emptyMsg.style.display = "flex";
 }
@@ -282,7 +252,7 @@ function resetResultData() {
 // Muestra la lista de canciones añadidas
 function showSongs() {
     const songsList = document.getElementById("songs-list");
-    const emptyMsg = document.getElementById("empty-msg");
+    const emptyMsg = document.getElementById("songslist-empty-msg");
     songsList.style.display = songsArray.length ? "grid" : "none";
     emptyMsg.style.display = songsArray.length ? "none" : "flex";
 
@@ -385,7 +355,7 @@ function fillFilterDataResult() {
     const filteredArray = array.filter(song => { //Uso la función filter para crear un array
         const matchesTitulo = !titulo || song.titulo.toLowerCase().includes(titulo.toLowerCase());
         const matchesArtista = !artista || song.artista.toLowerCase().includes(artista.toLowerCase());
-        const matchesPuntuacion = !puntuacion || song.puntuacion === puntuacion; 
+        const matchesPuntuacion = !puntuacion || song.puntuacion === puntuacion;
         //Se comprueba si cada canción cumple con las condiciones del filtro
 
         return matchesTitulo && matchesArtista && matchesPuntuacion; //Devuelve true solo si la revision cumple las 3 condiciones. Esto hace que solo las que cumplan el filtro se guarden en el array.
@@ -435,133 +405,18 @@ function appendVideo() {
 
 }
 
-let isModalVisible = false;
 
 function toggleModal() {
     const modalContainer = document.getElementById("modal-container");
     const modalToggler = document.getElementById("toggle-modal");
 
-    isModalVisible = !isModalVisible;
+    console.log("Modal toggleado");
 
-    if (isModalVisible) {
-        modalContainer.classList.add('show');
-        modalToggler.innerHTML = `<a><i class="fa-solid fa-chevron-right"></i></a>`;
-    } else {
+    if (modalContainer.classList.contains('show')) {
         modalContainer.classList.remove('show');
         modalToggler.innerHTML = `<a><i class="fa-solid fa-chevron-down"></i></a>`;
+    } else {
+        modalContainer.classList.add('show');
+        modalToggler.innerHTML = `<a><i class="fa-solid fa-chevron-right"></i></a>`;
     }
-}
-
-function appendModal(url) {
-    const modalContainer = document.getElementById("modal-container");
-    const modalToggler = document.getElementById("toggle-modal");
-
-    modalContainer.innerHTML = '';
-
-    let modal = document.createElement("div");
-    modal.className = "form-container";
-
-    if (url === "./html/register.php") {
-        modal.innerHTML = `
-                    <h5 class="text-left">Añade tus canciones favoritas.</h5>
-                    <p class="text-start">Pulsa en check para validar la canción y add para añadirla a tu bilioteca.</p>
-
-                    <form class="form d-flex flex-column gap-2 justify-content-center" id="register-form">
-                        <div class="form-group mb-3 d-flex flex-column justify-content-center">
-                            <input type="text" id="titulo" name="titulo" class="form-control" required placeholder="Título">
-                        </div>
-
-                        <div class="form-group mb-3 d-flex flex-column justify-content-center">
-                            <input type="text" id="artista" name="artista" class="form-control" required placeholder="Artista">
-                        </div>
-
-
-                        <div class="form-group mb-3 d-flex flex-column justify-content-center">
-                            <div class="rating justify-content-end">
-                                <input type="radio" id="star5" name="puntuacion" value="5">
-                                <label for="star5">★</label>
-                                <input type="radio" id="star4" name="puntuacion" value="4">
-                                <label for="star4">★</label>
-                                <input type="radio" id="star3" name="puntuacion" value="3">
-                                <label for="star3">★</label>
-                                <input type="radio" id="star2" name="puntuacion" value="2">
-                                <label for="star2">★</label>
-                                <input type="radio" id="star1" name="puntuacion" value="1">
-                                <label for="star1">★</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group justify-content-center" style="height: auto !important;">
-                            <input type="hidden" id="portada" data-remote="">
-                            <div id="preview-container" style="display: none;">
-                                <img id="preview-image" src="./media/default-cover.png" alt="Previsualización de portada" />
-                            </div>
-
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-secondary w-50" id="check-song">
-                                <i class="fa-solid fa-circle-check me-2"></i>Check
-                            </button>
-
-                            </button>
-                            <button type="submit" class="btn btn-primary w-50" id="add-song">
-                                <i class="fas fa-plus-circle me-2"></i>Add
-                            </button>
-                        </div>
-
-                    </form>`;
-    } else if (url === "./html/songslist.php") {
-        modal.innerHTML = `
-                    <p class="text-left">Busca y selecciona en los siguientes filtros.</p>
-
-                    <form class="form d-flex flex-column gap-2 justify-content-center" id="filter-form">
-                        <div class="form-group mb-2 d-flex flex-column align-items-center justify-content-center">
-                            <input type="text" id="titulo-filter" name="titulo-filter" class="form-control" required placeholder="Titulo">
-                        </div>
-
-                        <div class="form-group mb-2 d-flex flex-column align-items-center justify-content-center">
-                            <input type="text" id="artista-filter" name="artista-filter" class="form-control" required placeholder="Artista">
-                        </div>
-
-                        <div class="form-group  mb-2  d-flex flex-column justify-content-center">
-                            <div class="rating justify-content-end">
-                                <input type="radio" id="star-filter-5" name="puntuacion-filter" value="5">
-                                <label for="star-filter-5">★</label>
-                                <input type="radio" id="star-filter-4" name="puntuacion-filter" value="4">
-                                <label for="star-filter-4">★</label>
-                                <input type="radio" id="star-filter-3" name="puntuacion-filter" value="3">
-                                <label for="star-filter-3">★</label>
-                                <input type="radio" id="star-filter-2" name="puntuacion-filter" value="2">
-                                <label for="star-filter-2">★</label>
-                                <input type="radio" id="star-filter-1" name="puntuacion-filter" value="1">
-                                <label for="star-filter-1">★</label>
-                            </div>                         
-                        </div>
-
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary w-100" id="filter-song">
-                                <i class="fa-solid fa-magnifying-glass me-2"></i>Search
-                            </button>
-                            <button type="reset" class="btn btn-secondary w-25" id="reset-filter">
-                                <i class="fa-solid fa-xmark me-2"></i></button>
-                            </button>
-                        </div>
-
-                    </form>`;
-    } else if (url === "./html/index.php") {
-                modal.innerHTML = `
-                    <p class="text-left mb-0">Pulsa en este botón en las otras páginas para interactuar con ellas.</p>`
-    }
-    modalContainer.appendChild(modal);
-
-    modalContainer.classList.remove('show');
-    isModalVisible = false;
-    modalToggler.innerHTML = `<a><i class="fa-solid fa-chevron-down"></i></a>`;
-
-    modalToggler.removeEventListener("click", toggleModal);
-    modalToggler.addEventListener("click", toggleModal);
-
-    modalToggler.click();
 }

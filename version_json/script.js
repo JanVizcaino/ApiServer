@@ -1,0 +1,422 @@
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("toggle-modal").addEventListener("click", toggleModal);
+    appendVideo();
+});
+
+
+let searchArray = [];
+let songsArray = JSON.parse(localStorage.getItem("cancion")) || [];
+
+// Inicia los listeners al cargar el contenido
+function initEventListeners() {
+    const checkBtn = document.getElementById("check-song");
+    if (checkBtn) {
+        checkBtn.addEventListener("click", function (event) {
+            console.log("Hola");
+            event.preventDefault();
+            if (!validateRegisterForm('check')) return;
+            checkSongJSONP();
+        });
+    }
+
+    const addBtn = document.getElementById("add-song");
+    if (addBtn) {
+        addBtn.addEventListener("click", function (event) {
+            console.log("Hola");
+            event.preventDefault();
+            if (!validateRegisterForm('add')) return;
+            addSong();
+        });
+    }
+
+    const filterBtn = document.getElementById("filter-song");
+    if (filterBtn) {
+        filterBtn.addEventListener("click", function (event) {
+            console.log("Hola");
+            event.preventDefault();
+            if (!validateFilterForm()) return;
+            fillFilterDataResult();
+        });
+    }
+
+    const resetFilter = document.getElementById("reset-filter");
+    if (resetFilter) {
+        resetFilter.addEventListener("click", function (event) {
+            console.log("Hola");
+            event.preventDefault();
+            resetFilterData();
+        });
+    }
+
+
+}
+
+
+// Obtiene los datos del formulario
+function getFormData(type) {
+    if (type === 'register') {
+        return {
+            titulo: document.getElementById('titulo').value.trim(),
+            artista: document.getElementById('artista').value.trim(),
+            puntuacion: document.querySelector('input[name="puntuacion"]:checked')?.value,
+            portada: document.getElementById('portada')?.dataset.remote || null
+        };
+    } else if (type === 'filter') {
+        return {
+            titulo: document.getElementById('titulo-filter').value.trim(),
+            artista: document.getElementById('artista-filter').value.trim(),
+            puntuacion: document.querySelector('input[name="puntuacion-filter"]:checked')?.value
+        }
+    }
+}
+
+// Valida los datos del formulario según el modo (check/add)
+function validateRegisterForm(mode) {
+    const datosGuardados = localStorage.getItem("cancion");
+    const array = JSON.parse(datosGuardados);
+
+    const { titulo, artista, puntuacion, portada } = getFormData('register');
+    let error = '';
+
+    if (mode === 'add') {
+        if (!titulo) error = "El título es requerido";
+        else if (!artista) error = "El artista es requerido";
+        else if (!puntuacion) error = "Debes seleccionar una puntuación";
+        else if (!portada) error = "No hay imagen remota de portada disponible";
+
+        if (array) {
+            if (array.some(cancion => cancion.titulo === titulo)) {
+                error = "Ya has añadido esta canción";
+            }
+        }
+
+    } else if (mode === 'check') {
+        if (!titulo && !artista) error = "Debes completar al menos un campo para buscar";
+    }
+
+    if (error) {
+        showMessage('error', error);
+        return false;
+    }
+
+    if (mode === 'add') {
+        showMessage('success', `🎵 "${titulo}" de ${artista} añadida correctamente!`);
+    }
+
+    return true;
+}
+
+// Muestra un mensaje en pantalla (éxito o error)
+function showMessage(type, text) {
+    const msg = document.getElementById("msg");
+    const alertIcon = document.getElementById("alert-icon");
+    const alertMsg = document.getElementById("alert-msg");
+
+    alertIcon.className = type === 'success'
+        ? "fas fa-check-circle text-success"
+        : "fas fa-exclamation-circle text-danger";
+    alertMsg.textContent = text;
+    msg.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 end-0 mt-3 me-3 text-start shadow`;
+    msg.classList.remove("d-none");
+
+    setTimeout(() => msg.classList.add("d-none"), 3000);
+}
+
+function checkSongJSONP() {
+    const { titulo, artista } = getFormData('register');
+    const parts = [];
+
+    // Si el título está presente, lo agregamos al query
+    if (titulo && !artista) {
+        parts.push(`track:"${titulo}"`); // Solo busca por título si no hay artista
+    }
+
+    // Si el artista está presente, lo agregamos al query
+    if (artista && !titulo) {
+        parts.push(`artist:"${artista}"`); // Solo busca por artista si no hay título
+    }
+
+    // Si hay ambos, buscamos por título y artista
+    if (titulo && artista) {
+        parts.push(`track:"${titulo}" artist:"${artista}"`);
+    }
+
+    // Unimos las partes con un espacio
+    const query = encodeURIComponent(parts.join(' '));
+
+    console.log(query);
+
+    const script = document.createElement('script');
+    script.src = `https://api.deezer.com/search?q=${query}&output=jsonp&callback=deezerCallback`;
+    script.onerror = () => showMessage('error', '😹😉 Error al cargar datos de Deezer.');
+    script.onload = () => document.body.removeChild(script);
+    document.body.appendChild(script);
+}
+
+// Callback que recibe datos desde Deezer
+function deezerCallback(response) {
+    if (response && response.data && response.data.length) {
+        searchArray = response.data.slice(0, 10);
+        fillResultData();
+    } else {
+        showMessage('error', 'No se encontró ningún resultado.');
+    }
+}
+
+// Llena la lista de resultados con las canciones encontradas
+function fillResultData() {
+    const resultList = document.getElementById("results-list");
+    const emptyMsg = document.getElementById("empty-msg");
+    resultList.style.display = searchArray.length ? "flex" : "none";
+    emptyMsg.style.display = searchArray.length ? "none" : "flex";
+
+    resultList.innerHTML = searchArray.map((song, index) => `
+    <li class="d-flex justify-content-between align-items-center search-result">
+        <div class="d-flex align-items-center">
+            <p class="mb-0 me-5">#${index + 1}</p>
+            <div class="search-album-art">
+                <img src="https://e-cdns-images.dzcdn.net/images/cover/${song.md5_image}/500x500-000000-80-0-0.jpg" alt="${song.title}" class="album-cover">
+            </div>
+            <div class="search-song-info ms-3 mt-2">
+                <h5 class="">${song.title}</h5>
+                <p class="mb-1"><strong>Artista:</strong> ${song.artist.name}</p>
+            </div>
+        </div>
+        <i class="fa-solid fa-square-plus fs-4 text-secondary"
+        onclick="fillFormData('${song.title.replace(/'/g, "\\'")}', '${song.artist.name.replace(/'/g, "\\'")}', '${song.md5_image}')">
+        </i>
+    </li>
+    `).join('');
+}
+
+// Rellena el formulario con los datos de una canción seleccionada
+function fillFormData(titulo, artista, portada) {
+    document.getElementById('titulo').value = titulo;
+    document.getElementById('artista').value = artista;
+    if (typeof portada === 'string') {
+        const imgURL = `https://e-cdns-images.dzcdn.net/images/cover/${portada}/500x500-000000-80-0-0.jpg`;
+        document.getElementById('preview-image').src = imgURL;
+        document.getElementById("preview-container").style.display = 'flex';
+        document.getElementById('portada').dataset.remote = portada;
+    }
+}
+
+// Añade una canción al array de canciones
+function addSong() {
+    const { titulo, artista, puntuacion, portada } = getFormData('register');
+    const defaultCover = './media/default-cover.png';
+
+    const nextId = songsArray.length > 0
+        ? Math.max(...songsArray.map(s => s.id ?? 0)) + 1
+        : 0;
+
+    console.log(nextId);
+
+    const newSong = {
+        id: nextId,
+        titulo,
+        artista,
+        puntuacion,
+        portada: portada ? `https://e-cdns-images.dzcdn.net/images/cover/${portada}/500x500-000000-80-0-0.jpg` : defaultCover,
+        md5_image: portada
+    };
+
+    songsArray.push(newSong);
+    saveLocalStorage();
+    resetForm('register');
+    resetResultData();
+}
+
+// Reinicia el formulario tras añadir una canción
+function resetForm(type) {
+    if (type === 'register') {
+        document.getElementById("register-form").reset();
+        document.getElementById("preview-container").style.visibility = 'hidden';
+        document.getElementById("preview-image").src = '';
+        document.getElementById("preview-container").style.display = 'none';
+
+        document.getElementById("portada").dataset.remote = '';
+    } else if (type === 'filter') {
+        document.getElementById('filter-form').reset();
+    }
+
+}
+
+function resetResultData() {
+    const resultList = document.getElementById("results-list");
+    const emptyMsg = document.getElementById("songslist-empty-msg");
+    resultList.style.display = "none";
+    emptyMsg.style.display = "flex";
+}
+
+// Muestra la lista de canciones añadidas
+function showSongs() {
+    const songsList = document.getElementById("songs-list");
+    const emptyMsg = document.getElementById("songslist-empty-msg");
+    songsList.style.display = songsArray.length ? "grid" : "none";
+    emptyMsg.style.display = songsArray.length ? "none" : "flex";
+
+    songsList.innerHTML = songsArray.map(song => `
+    <div id="song_${song.id}" class="song-card-list">
+        <div class="album-art-list">
+            <img src="${song.portada}" alt="${song.titulo}" class="album-cover-list">
+        </div>
+        <div class="song-info-list">
+            <h5>${song.titulo}</h5>
+            <p>${song.artista}</p>
+        </div>
+        <div class="rating-container-list">
+            <span id="rating${song.titulo}"></span>
+        </div>
+    </div>
+`).join('');
+
+    songsArray.forEach(song => addRating(song.puntuacion, song.titulo));
+
+    songsArray.forEach(song => addDelete(song.id));
+}
+
+// Añade estrellas según la puntuación
+function addRating(rating, title) {
+    const id = document.getElementById('rating' + title);
+    id.innerHTML = '';
+
+    for (let i = 0; i < rating; i++) {
+        id.innerHTML += `<i class="fa-solid fa-star"></i>`;
+    }
+    for (let i = rating; i < 5; i++) {
+        id.innerHTML += `<i class="fa-regular fa-star"></i>`;
+    }
+
+    id.setAttribute('value', rating)
+
+}
+
+
+function addDelete(id) {
+    const songCard = document.getElementById(`song_${id}`);
+    const deleteButton = document.createElement("button");
+    deleteButton.classList.add("btn", "btn-danger", "btn-sm", "float-end", "hidden");
+    deleteButton.innerHTML = `<i class="fa-solid fa-square-minus"></i>`;
+    deleteButton.id = `delete-${id}`;
+
+    songCard.addEventListener("mouseenter", () => {
+        deleteButton.classList.remove("hidden");
+    });
+
+    songCard.addEventListener("mouseleave", () => {
+        deleteButton.classList.add("hidden");
+    });
+
+
+    deleteButton.addEventListener("click", () => {
+        const index = songsArray.findIndex(song => song.id === id);
+        if (index !== -1) {
+            songsArray.splice(index, 1);
+            saveLocalStorage();
+            showSongs();
+            showMessage("success", "Canción eliminada correctamente");
+        }
+    });
+
+    songCard.appendChild(deleteButton);
+}
+
+
+function saveLocalStorage() {
+    localStorage.setItem("cancion", JSON.stringify(songsArray));
+}
+
+
+function validateFilterForm() {
+    const { titulo, artista, puntuacion } = getFormData('filter');
+
+    let error = '';
+
+    if (!titulo && !artista && !puntuacion) {
+        error = "Debes completar al menos un campo para buscar";
+    }
+
+    if (error) {
+        showMessage('error', error);
+        return false;
+    }
+
+    return true;
+}
+
+function fillFilterDataResult() {
+    const { titulo, artista, puntuacion } = getFormData('filter'); //Coge la información del formulario de filtro
+
+    const datosGuardados = localStorage.getItem("cancion"); //convierte el localStorage la constante datos guardados
+    if (!datosGuardados) return;
+
+    const array = JSON.parse(datosGuardados); //Convierte de JSON a Array la constante 
+    const filteredArray = array.filter(song => { //Uso la función filter para crear un array
+        const matchesTitulo = !titulo || song.titulo.toLowerCase().includes(titulo.toLowerCase());
+        const matchesArtista = !artista || song.artista.toLowerCase().includes(artista.toLowerCase());
+        const matchesPuntuacion = !puntuacion || song.puntuacion === puntuacion;
+        //Se comprueba si cada canción cumple con las condiciones del filtro
+
+        return matchesTitulo && matchesArtista && matchesPuntuacion; //Devuelve true solo si la revision cumple las 3 condiciones. Esto hace que solo las que cumplan el filtro se guarden en el array.
+    });
+
+    if (filteredArray.length === 0) { //Si el array es igual a 0, no hay resultados
+        showMessage("error", "No se han encontrado resultados");
+    } else { //Si el array es mayro, si que hay resultados
+        showMessage("success", "Se han encontrado resultados");
+        songsArray.length = 0; //Se vacía el array de canciones (el que las muestra)
+        filteredArray.forEach(song => songsArray.push(song)); //Y se llena con las canciones del filtro.
+    }
+
+    showSongs(); //Posteriormente se llama a que se ejecuten las funciones
+}
+
+function resetFilterData() {
+    resetForm('filter');
+
+    const datosGuardados = localStorage.getItem("cancion");
+    if (!datosGuardados) return;
+
+    const array = JSON.parse(datosGuardados);
+
+    songsArray.length = 0;
+    array.forEach(song => songsArray.push(song));
+
+    showSongs();
+}
+
+function appendVideo() {
+    const video = document.createElement("video");
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playbackRate = 0.5;
+    video.id = "backgroundVideo";
+
+    const source = document.createElement("source");
+    source.src = "./media/background.mp4";
+    source.type = "video/mp4";
+
+    video.appendChild(source);
+    video.innerHTML += "Tu navegador no soporta videos HTML5.";
+
+    document.querySelector("main").appendChild(video);
+
+}
+
+
+function toggleModal() {
+    const modalContainer = document.getElementById("modal-container");
+    const modalToggler = document.getElementById("toggle-modal");
+
+    console.log("Modal toggleado");
+
+    if (modalContainer.classList.contains('show')) {
+        modalContainer.classList.remove('show');
+        modalToggler.innerHTML = `<a><i class="fa-solid fa-chevron-down"></i></a>`;
+    } else {
+        modalContainer.classList.add('show');
+        modalToggler.innerHTML = `<a><i class="fa-solid fa-chevron-right"></i></a>`;
+    }
+}
