@@ -22,5 +22,9 @@
     {
         "email": "jan@gmail.com",
         "password": "1234"
+    },
+    {
+        "email": "prueba@php.com",
+        "password": "123456"
     }
 ]
